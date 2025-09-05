@@ -1,22 +1,23 @@
-from flask import Flask, render_template, request, send_file, session
+import io
 from urllib.parse import urlparse
 from urllib import robotparser
+
+import pandas as pd
+from flask import Flask, render_template, request, send_file, session
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
-import pandas as pd
-import io
-from selenium import webdriver
-options = webdriver.ChromeOptions()
-options.add_argument('--headless')
-options.add_argument('--no-sandbox')
-options.add_argument('--disable-dev-shm-usage')
-options.add_argument('--disable-gpu')
-driver = webdriver.Chrome(options=options)
 
 app = Flask(__name__)
-app.secret_key = "supersecret"  # szükséges a session-höz
+app.secret_key = "supersecret" 
+
+def create_driver():
+    options = webdriver.ChromeOptions()
+    options.add_argument('--headless')
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-dev-shm-usage')
+    options.add_argument('--disable-gpu')
+    return webdriver.Chrome(options=options)
 
 
 def is_allowed(url):
