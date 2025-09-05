@@ -7,6 +7,7 @@ from flask import Flask, render_template, request, send_file, session
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.chrome.options import Options
 
 app = Flask(__name__)
 app.secret_key = "supersecret" 
