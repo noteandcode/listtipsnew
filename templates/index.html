@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Link Extractor</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        input[type=text] { width: 400px; padding: 8px; }
+        button { padding: 8px 12px; margin-left: 10px; }
+        .error { color: red; margin-top: 20px; }
+        .results { margin-top: 20px; }
+        ul { line-height: 1.6; }
+    </style>
+</head>
+<body>
+    <h1>Extract Testimonial Links</h1>
+    <h2>Are you looking to build a list of potential B2B clients? If so, you might already know of an app that serves a similar audience. In that case, the companies who have shared testimonials for that app could make excellent leads for your business. Great news—it's possible to gather all the URLs of those companies that provided testimonials!</h2>
+    <h4>Enter the url of a the app.<h/4>
+    <h4>Wait. It can take 30-60 seconds to extract the urls.</h4>
+    <h4>See the list.</h4>
+    <h4>Doawnload the list</h4>
+    <form method="post">
+        <input type="text" name="url" placeholder="Enter a URL" required>
+        <button type="submit">Check</button>
+    </form>
+
+    {% if error %}
+        <div class="error">{{ error }}</div>
+    {% endif %}
+    
+    <!-- Add this section after the error display -->
+    {% if no_results %}
+        <div class="error">No URLs found matching the criteria.</div>
+    {% endif %}
+
+    {% if results %}
+    <h2>Filterd links:</h2>
+    <ul>
+        {% for link in results %}
+            <li><a href="{{ link }}" target="_blank">{{ link }}</a></li>
+        {% endfor %}
+    </ul>
+    <a href="{{ url_for('download') }}">
+        <button>Download Excel File</button>
+    </a>
+    {% endif %}
+
+    <p></p>
+    <p></p>
+    <p></p>
+    <p></p>
+
+    <!-- Legal Links -->
+    <div class="legal-links">
+        <a href="#" onclick="showLegal('privacy')">Privacy Policy</a>
+        <a href="#" onclick="showLegal('terms')">Terms of Use</a>
+    </div>
+
+    <!-- Privacy Policy -->
+    <div id="privacy-policy" class="legal-section">
+        <span class="close-legal" onclick="hideLegal('privacy')">&times;</span>
+        <h2>Privacy Policy</h2>
+        <p><strong>Effective Date:</strong> September 3, 2025</p>
+        
+        <h3>1. Data Controller</h3>
+        <p>The data controller for this website is:</p>
+        <ul>
+            <li><strong>Name:</strong> Piroska Rakoczi</li>
+            <li><strong>Address:</strong> 1117 Budapest, Irinyi József utca 28/b, Hungary</li>
+            <li><strong>Email:</strong> piroska@aiperse.hu</li>
+            <li><strong>Website:</strong> listtips.pythonanywhere.com</li>
+        </ul>
+
+        <h3>2. Supervisory Authority</h3>
+        <p>The competent supervisory authority for data protection matters is:</p>
+        <ul>
+            <li><strong>Authority:</strong> NAIH (National Authority for Data Protection and Freedom of Information)</li>
+            <li><strong>Address:</strong> 1055 Budapest, Falk Miksa utca 9-11, Hungary</li>
+        </ul>
+
+        <h3>3. Data We Collect</h3>
+        <p>We don'T collect data 
+
+        <h3>10. Cookies</h3>
+        <p>We don't use Googlecookies.</p>
+
+        <h3>12. Contact Us</h3>
+        <p>For any privacy-related questions or to exercise your rights, contact us at: piroska@aiperse.hu</p>
+
+        <h3>13. Changes to This Policy</h3>
+        <p>We may update this privacy policy from time to time. Changes will be posted on this page with an updated effective date.</p>
+    </div>
+
+    <!-- Terms of Use -->
+    <div id="terms-of-use" class="legal-section">
+        <span class="close-legal" onclick="hideLegal('terms')">&times;</span>
+        <h2>Terms of Use</h2>
+        <p><strong>Effective Date:</strong> September 3, 2025</p>
+
+        <h3>1. Acceptance of Terms</h3>
+        <p>By accessing and using listtipsnew.onrender.com (the "Service"), you accept and agree to be bound by the terms and provision of this agreement.</p>
+
+        <h3>2. Description of Service</h3>
+        <p>Our Service provides a tool to extract and filter root-level links from websites. The Service is provided "as is" without any warranties.</p>
+
+        <h3>3. Acceptable Use</h3>
+        <p>You agree to use the Service only for lawful purposes and in a way that does not infringe the rights of others or restrict their use of the Service. Prohibited uses include:</p>
+        <ul>
+            <li>Using the Service for any illegal or unauthorized purpose</li>
+            <li>Attempting to gain unauthorized access to other systems</li>
+            <li>Interfering with or disrupting the Service</li>
+            <li>Using the Service to extract data from websites without permission</li>
+            <li>Violating any applicable laws or regulations</li>
+        </ul>
+
+        <h3>4. Intellectual Property</h3>
+        <p>The Service and its original content, features, and functionality are owned by Piroska Rakoczi and are protected by international copyright, trademark, and other intellectual property laws.</p>
+
+        <h3>5. User Content</h3>
+        <p>You retain ownership of any URLs or data you input into the Service. However, you are responsible for ensuring you have the right to extract links from the websites you analyze.</p>
+
+        <h3>6. Privacy</h3>
+        <p>Your privacy is important to us. Please review our Privacy Policy, which also governs your use of the Service.</p>
+
+        <h3>7. Disclaimer of Warranties</h3>
+        <p>The Service is provided "AS IS" and "AS AVAILABLE" without warranties of any kind, either express or implied, including but not limited to:</p>
+        <ul>
+            <li>Merchantability</li>
+            <li>Fitness for a particular purpose</li>
+            <li>Non-infringement</li>
+            <li>Accuracy, reliability, or completeness of results</li>
+        </ul>
+
+        <h3>8. Limitation of Liability</h3>
+        <p>In no event shall Piroska Rakoczi be liable for any indirect, incidental, special, consequential, or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses, resulting from your use of the Service.</p>
+
+        <h3>9. Indemnification</h3>
+        <p>You agree to indemnify and hold harmless Piroska Rakoczi from any claims, damages, or expenses arising from your use of the Service or violation of these Terms.</p>
+
+        <h3>10. Service Availability</h3>
+        <p>We do not guarantee that the Service will be available at all times. We may suspend or terminate the Service for maintenance, updates, or other reasons without prior notice.</p>
+
+        <h3>11. Modifications</h3>
+        <p>We reserve the right to modify or replace these Terms at any time. If a revision is material, we will try to provide at least 30 days notice prior to any new terms taking effect.</p>
+
+        <h3>12. Termination</h3>
+        <p>We may terminate or suspend your access immediately, without prior notice or liability, for any reason whatsoever, including without limitation if you breach the Terms.</p>
+
+        <h3>13. Governing Law</h3>
+        <p>These Terms shall be interpreted and governed by the laws of Hungary. Any disputes relating to these terms will be subject to the exclusive jurisdiction of the courts of Hungary.</p>
+
+        <h3>14. Severability</h3>
+        <p>If any provision of these Terms is held to be invalid or unenforceable, the remaining provisions will remain in full force and effect.</p>
+
+        <h3>15. Contact Information</h3>
+        <p>If you have any questions about these Terms, please contact us at: piroska@aiperse.hu</p>
+    </div>
+
+    <script>
+        function showLegal(type) {
+            // Hide all legal sections first
+            document.getElementById('privacy-policy').style.display = 'none';
+            document.getElementById('terms-of-use').style.display = 'none';
+            
+            // Show the requested section
+            if (type === 'privacy') {
+                document.getElementById('privacy-policy').style.display = 'block';
+            } else if (type === 'terms') {
+                document.getElementById('terms-of-use').style.display = 'block';
+            }
+            
+            // Scroll to the legal section
+            document.querySelector('.legal-section[style*="block"]').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function hideLegal(type) {
+            if (type === 'privacy') {
+                document.getElementById('privacy-policy').style.display = 'none';
+            } else if (type === 'terms') {
+                document.getElementById('terms-of-use').style.display = 'none';
+            }
+        }
+    </script>
+
+</body>
+</html>
+    
+</body>
+</html>
