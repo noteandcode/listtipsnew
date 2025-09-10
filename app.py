@@ -1,6 +1,7 @@
 import io
 from urllib.parse import urlparse
 from urllib import robotparser
+import time
 
 import pandas as pd
 from flask import Flask, render_template, request, send_file, session
@@ -8,16 +9,46 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.chrome.options import Options
+from selenium.common.exceptions import TimeoutException, WebDriverException
 
 app = Flask(__name__)
 app.secret_key = "supersecret" 
 
 def create_driver():
+    """Create a Chrome driver with optimized settings to prevent crashes"""
     options = webdriver.ChromeOptions()
-    options.add_argument('--headless')
+    
+    # Basic headless settings
+    options.add_argument('--headless=new')  # Use new headless mode
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
     options.add_argument('--disable-gpu')
+    
+    # Memory and stability improvements
+    options.add_argument('--disable-extensions')
+    options.add_argument('--disable-plugins')
+    options.add_argument('--disable-images')  # Don't load images to save memory
+    options.add_argument('--disable-javascript')  # Disable JS if not needed for link extraction
+    options.add_argument('--memory-pressure-off')
+    options.add_argument('--max_old_space_size=4096')
+    
+    # Process management
+    options.add_argument('--single-process')  # Use single process to avoid crashes
+    options.add_argument('--disable-background-timer-throttling')
+    options.add_argument('--disable-renderer-backgrounding')
+    options.add_argument('--disable-backgrounding-occluded-windows')
+    
+    # Network and security
+    options.add_argument('--disable-web-security')
+    options.add_argument('--disable-features=TranslateUI')
+    options.add_argument('--disable-ipc-flooding-protection')
+    
+    # User agent
+    options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
+    
+    # Set page load strategy to eager (don't wait for all resources)
+    options.page_load_strategy = 'eager'
+    
     return webdriver.Chrome(options=options)
 
 
@@ -34,66 +65,94 @@ def is_allowed(url):
 
 
 def extract_links(url):
+    """Extract links from a webpage with improved error handling and crash prevention"""
     links = []
-
-    # Selenium beállítása headless Chrome-mal (Selenium Manager automatikusan kezeli a drivert)
-    chrome_options = Options()
-    chrome_options.add_argument("--headless=new")
-    chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
-    chrome_options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
-
-    driver = webdriver.Chrome(options=chrome_options)  # nincs szükség driver path-ra
-    driver.set_page_load_timeout(60)
-
+    driver = None
+    
     try:
-        driver.get(url)
-        # Várunk, amíg legalább egy <a> megjelenik (nem használunk time.sleep-et)
-        WebDriverWait(driver, 15).until(lambda d: len(d.find_elements(By.TAG_NAME, "a")) > 0)
-
-        # Stale element reference elkerülése: href értékeket gyűjtjük, nem az elemeket
-        links_set = set()
+        driver = create_driver()
+        # Reduced timeout to prevent hanging
+        driver.set_page_load_timeout(30)
+        driver.implicitly_wait(5)
         
-        # Többszörös próbálkozás a dinamikus tartalom kezelésére
-        max_attempts = 3
+        print(f"Attempting to load URL: {url}")
+        driver.get(url)
+        
+        # Wait for page to load with shorter timeout
+        try:
+            WebDriverWait(driver, 10).until(
+                lambda d: d.execute_script("return document.readyState") == "complete"
+            )
+        except TimeoutException:
+            print("Page load timeout, but continuing with link extraction...")
+        
+        # Alternative wait: check for any links to appear
+        try:
+            WebDriverWait(driver, 10).until(
+                lambda d: len(d.find_elements(By.TAG_NAME, "a")) > 0
+            )
+        except TimeoutException:
+            print("No links found within timeout, but continuing...")
+        
+        # Extract links with improved error handling
+        links_set = set()
+        max_attempts = 2  # Reduced attempts to prevent hanging
+        
         for attempt in range(max_attempts):
             try:
-                # Minden alkalommal frissen keressük meg az elemeket
+                print(f"Link extraction attempt {attempt + 1}")
+                
+                # Get all anchor elements at once
                 anchors = driver.find_elements(By.TAG_NAME, "a")
+                print(f"Found {len(anchors)} anchor elements")
                 
-                # Egy menetben gyűjtjük ki az összes href értéket
-                href_values = []
-                for i, anchor in enumerate(anchors):
-                    try:
-                        href = anchor.get_attribute("href")
-                        if href:
-                            href_values.append(href)
-                    except Exception as e:
-                        # Ha egy elem elavult, folytatjuk a következővel
-                        continue
+                # Extract href attributes in batches to prevent stale element references
+                batch_size = 50  # Process in smaller batches
+                for i in range(0, len(anchors), batch_size):
+                    batch = anchors[i:i + batch_size]
+                    
+                    for anchor in batch:
+                        try:
+                            href = anchor.get_attribute("href")
+                            if href and href.startswith("http"):
+                                links_set.add(href)
+                        except Exception as e:
+                            # Skip stale or problematic elements
+                            continue
+                    
+                    # Small delay between batches to prevent overloading
+                    if i + batch_size < len(anchors):
+                        time.sleep(0.1)
                 
-                # Szűrjük és tároljuk az érvényes linkeket
-                for href in href_values:
-                    if href and href.startswith("http"):
-                        links_set.add(href)
-                
-                # Ha sikerült, kilépünk a ciklusból
+                # If we got here successfully, break the retry loop
                 break
                 
             except Exception as e:
+                print(f"Attempt {attempt + 1} failed: {str(e)}")
                 if attempt == max_attempts - 1:
-                    # Ha az utolsó próbálkozás is sikertelen, dobjuk tovább a hibát
-                    raise e
-                # Várunk egy kicsit a következő próbálkozás előtt
-                import time
-                time.sleep(1)
+                    # Last attempt failed, but continue with what we have
+                    print("All attempts failed, using collected links so far")
+                    break
+                # Wait before retry
+                time.sleep(2)
         
         links = list(links_set)
+        print(f"Successfully extracted {len(links)} unique links")
         
+    except WebDriverException as e:
+        print(f"WebDriver error: {str(e)}")
+        raise Exception(f"Browser error occurred: {str(e)}")
+    except Exception as e:
+        print(f"General error during link extraction: {str(e)}")
+        raise Exception(f"Error during link extraction: {str(e)}")
     finally:
-        driver.quit()
-
+        # Ensure driver is always closed
+        if driver:
+            try:
+                driver.quit()
+            except Exception as e:
+                print(f"Error closing driver: {str(e)}")
+    
     return links
 
 
